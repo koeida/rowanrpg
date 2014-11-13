@@ -1,5 +1,7 @@
 import libtcodpy as libtcod
 import random
+import copy
+from sets import Set
 
 class Entity:
     def __init__(self):
@@ -27,8 +29,8 @@ SCREEN_WIDTH = 100
 SCREEN_HEIGHT = 100
 
 #size of the game_map
-game_map_WIDTH = 100
-game_map_HEIGHT = 100
+game_map_WIDTH = 80
+game_map_HEIGHT = 80
 
 color_dark_wall = libtcod.Color(50, 50, 0)
 color_dark_ground = libtcod.Color(100, 100, 50)
@@ -43,8 +45,8 @@ def draw_character(x,y,c,color = libtcod.white,bg = libtcod.BKGND_NONE):
 
 def render_all(game_map):
     tiles = {
-            0:[" ",libtcod.white,color_dark_ground],
-            1:[" ",libtcod.white,color_dark_wall],
+            0:[".",libtcod.white,color_dark_ground],
+            1:["#",libtcod.white,color_dark_wall],
             2:["#",color_light_green,color_grass],
             3:["T",color_tree,color_grass],
             4:["S",libtcod.white,color_dark_ground]}
@@ -59,69 +61,109 @@ def render_all(game_map):
 
     libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
+def carveRoom(m,x,y,width,height,carveWith):   
+    result = copy.deepcopy(m)
+    for cy in range(height):
+        for cx in range(width):
+            yi = y + cy
+            xi = x + cx
+            result[yi][xi] = carveWith
+    return result
 
-def generateCave(startingMap):
-    spawn_rate = 5
-    MAX_DIGGERS = 2000
-    diggers = [[50,50,100]]
-    i = 0
-    while sum(map(sum,startingMap)) > 8000:
-        i += 1
-        availableDiggers = filter(lambda x: x[2] != 0,diggers)
-        for digger in availableDiggers:
-            dx = digger[0]
-            dy = digger[1]
-            energy = digger[2]
-            if energy > 0:
-                startingMap[dy][dx] = 0
-                atTop = dy == 0
-                atBottom = dy == 99
-                atLeft = dx == 0
-                atRight = dx == 99
-                possibleMoves = []
-                if not atTop: possibleMoves += [[1,startingMap[dy - 1]]]
-                if not atBottom: possibleMoves += [[2,startingMap[dy + 1]]]
-                if not atLeft: possibleMoves += [[4,startingMap[dx - 1]]]
-                if not atRight: possibleMoves += [[3,startingMap[dx + 1]]]
-                possibleMoves = filter(lambda m: m[1] != 0,possibleMoves)
+def multiListCopy(source,dest,startX,startY):
+    result = copy.deepcopy(dest)
+    for y in range(len(source)):
+        for x in range(len(source[0])):
+            result[y + startY][x + startX] = source[y][x]            
+    return result
 
-                if len(possibleMoves) == 0:
-                    if(len(availableDiggers) == 1):
-                        direction = random.randint(1,4)
-                        oldX = dx
-                        oldY = dx
-                        if direction == 1: dx -= 1
-                        if direction == 2: dx += 1
-                        if direction == 3: dy -= 1
-                        if direction == 4: dy += 1
-                        if dx <= 1 or dx >= len(startingMap) - 1 or dy <= 1 or dy >= len(startingMap) - 1:
-                            dx = oldX
-                            dy = oldY
-                        digger[0] = dx
-                        digger[1] = dy
-                    else:
-                        digger[2] = 0
-                else:
-                    direction = possibleMoves[random.randint(0,len(possibleMoves) - 1)][0]
-                    oldX = dx
-                    oldY = dy
-                    if direction == 1: dy -= 1
-                    if direction == 2: dy += 1
-                    if direction == 3: dx += 1
-                    if direction == 4: dx -= 1
-                    if dx <= 1 or dx >= len(startingMap) - 1 or dy <= 1 or dy >= len(startingMap) - 1:
-                        dx = oldX
-                        dy = oldY
-                    digger[0] = dx
-                    digger[1] = dy
-                    if random.randint(0,1000) < spawn_rate:
-                        if len(diggers) > MAX_DIGGERS:
-                            print "MAX"
-                        diggers += [[dx,dy,random.randint(200,400)]]
+class Split:
+    def __init__(self,x,y,w,h):
+        self.x = x
+        self.y = y
+        self.w = w
+        self.h = h
 
-    return startingMap
+class Tree:
+    def __init__(self,leaf,l,r):
+        self.leaf = leaf
+        self.l = l
+        self.r = r
+    def display(self):
+        #if self.l == None and self.r == None:
+        print str(self.leaf.x) + "," + str(self.leaf.y) + " w:" + str(self.leaf.w) + " h:" + str(self.leaf.h)
+        if(self.l != None):
+            self.l.display()
+        if(self.r != None):
+            self.r.display()
+    def displayG(self,m):        
+        drawRect(m,self.leaf.x,self.leaf.y,self.leaf.w,self.leaf.h)
+        if(self.l != None):
+            self.l.displayG(m)
+        if(self.r != None):
+            self.r.displayG(m)
 
-game_map = generateCave(starting_map)
+def drawRect(m,x,y,w,h):
+    for row in range(h):
+        for column in range(w):
+            if row == 0 or column == 0 or row == (h - 1) or column == (w - 1): 
+                m[row + y][column + x] = 0
+    
+
+def filterTree(f,t):
+    if t == None: return None
+    if f(t.leaf):
+        return Tree(t.leaf,filterTree(f,t.l),filterTree(f,t.r))
+    else:
+        return None
+
+def mapTree(f,t):
+    if t == None: return None
+    res = f(t)
+    return Tree(res.leaf,mapTree(f,t.l),mapTree(f,t.r))
+
+m = [[1 for x in range(100)] for y in range(100)]
+
+def treeDebug(t):
+    global m
+    t.displayG(m)
+    render_all(m)    
+    libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+    libtcod.console_flush()
+    key = libtcod.console_wait_for_keypress(True)
+
+def generateSplit(t):
+    global m
+    x = t.leaf.x
+    y = t.leaf.y
+    w = t.leaf.w
+    h = t.leaf.h
+    MIN_ROOM_SIZE = 20
+    if w < MIN_ROOM_SIZE or h < MIN_ROOM_SIZE:
+        return None
+
+    roomBuffer = MIN_ROOM_SIZE / 2
+    vertical = random.randint(0,1)
+    if(vertical):
+        minSplit = roomBuffer
+        maxSplit = h - roomBuffer        
+        splitY = random.randint(minSplit,maxSplit)
+        l = Split(x,y,w,splitY)
+        r = Split(x,splitY + y,w,h - splitY)
+        t = Tree(Split(x,y,w,h),Tree(l,None,None),Tree(r,None,None))           
+        treeDebug(t)
+        return Tree(Split(x,y,w,h),generateSplit(Tree(l,None,None)),generateSplit(Tree(r,None,None)))
+    else:
+        minSplit = roomBuffer
+        maxSplit = w - roomBuffer
+        splitX = random.randint(minSplit,maxSplit)        
+        l = Split(x,y,splitX ,h)
+        r = Split(splitX + x,y,w - splitX,h)
+        t = Tree(Split(x,y,w,h),Tree(l,None,None),Tree(r,None,None))
+        treeDebug(t)
+        return Tree(Split(x,y,w,h),generateSplit(Tree(l,None,None)),generateSplit(Tree(r,None,None)))
+        
+
 def handle_keys():
     global player
     key = libtcod.console_wait_for_keypress(True)
@@ -176,7 +218,6 @@ def moveSquirrel():
 #############################################
 
 
-
 libtcod.console_disable_keyboard_repeat()
 
 libtcod.console_set_custom_font('arial10x10.png', libtcod.FONT_TYPE_GREYSCALE | libtcod.FONT_LAYOUT_TCOD)
@@ -185,9 +226,20 @@ con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 
 libtcod.console_disable_keyboard_repeat()
 
+
+t = generateSplit(Tree(Split(0,0,80,80),None,None))
+t.displayG(m)
+render_all(m)    
+libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
+libtcod.console_flush()
+print "done"
+key = libtcod.console_wait_for_keypress(True)
+exit()
+
+
 while not libtcod.console_is_window_closed():
     #render the screen
-    moveSquirrel()
+    #moveSquirrel()
     render_all(game_map)    
 
     for entity in entities:
