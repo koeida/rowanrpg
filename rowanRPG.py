@@ -102,12 +102,24 @@ class Tree:
             self.l.displayG(m)
         if(self.r != None):
             self.r.displayG(m)
+    def displayF(self,m):
+        if self.l == None and self.r == None:   
+            fillRect(m,self.leaf.x,self.leaf.y,self.leaf.w,self.leaf.h)
+        if(self.l != None):
+            self.l.displayF(m)
+        if(self.r != None):
+            self.r.displayF(m)
 
 def drawRect(m,x,y,w,h):
     for row in range(h):
         for column in range(w):
             if row == 0 or column == 0 or row == (h - 1) or column == (w - 1): 
                 m[row + y][column + x] = 0
+
+def fillRect(m,x,y,w,h):
+    for row in range(h):
+        for column in range(w):            
+            m[row + y][column + x] = 0
     
 
 def filterTree(f,t):
@@ -121,6 +133,16 @@ def mapTree(f,t):
     if t == None: return None
     res = f(t)
     return Tree(res.leaf,mapTree(f,t.l),mapTree(f,t.r))
+
+def mapTreeBottom(f,t):
+    if t == None:
+        return None
+    if t.l == None and t.r == None:
+        res = f(t)        
+        return Tree(res.leaf,None,None)
+    else:
+        return Tree(t.leaf,mapTreeBottom(f,t.l),mapTreeBottom(f,t.r))
+
 
 m = [[1 for x in range(100)] for y in range(100)]
 
@@ -138,7 +160,7 @@ def generateSplit(t):
     y = t.leaf.y
     w = t.leaf.w
     h = t.leaf.h
-    MIN_ROOM_SIZE = 20
+    MIN_ROOM_SIZE = 10
     if w < MIN_ROOM_SIZE or h < MIN_ROOM_SIZE:
         return None
 
@@ -151,7 +173,6 @@ def generateSplit(t):
         l = Split(x,y,w,splitY)
         r = Split(x,splitY + y,w,h - splitY)
         t = Tree(Split(x,y,w,h),Tree(l,None,None),Tree(r,None,None))           
-        treeDebug(t)
         return Tree(Split(x,y,w,h),generateSplit(Tree(l,None,None)),generateSplit(Tree(r,None,None)))
     else:
         minSplit = roomBuffer
@@ -160,9 +181,27 @@ def generateSplit(t):
         l = Split(x,y,splitX ,h)
         r = Split(splitX + x,y,w - splitX,h)
         t = Tree(Split(x,y,w,h),Tree(l,None,None),Tree(r,None,None))
-        treeDebug(t)
         return Tree(Split(x,y,w,h),generateSplit(Tree(l,None,None)),generateSplit(Tree(r,None,None)))
-        
+
+def makeRoom(t):
+    MIN_SIZE = 8
+    area = t.leaf
+    minX = area.x + 1
+    minY = area.y + 1
+    maxX = area.x + area.w - MIN_SIZE - 1
+    maxY = area.y + area.h - MIN_SIZE - 1
+    
+    newX = random.randint(minX,maxX)
+    newY = random.randint(minY,maxY)
+    newW = random.randint(MIN_SIZE,area.w - (newX - minX))
+    newH = random.randint(MIN_SIZE,area.h - (newY - minY))
+    return Tree(Split(newX,newY,newW,newH),t.l,t.r)
+
+
+def generateDungeon():
+    t = generateSplit(Tree(Split(0,0,80,80),None,None))
+    t = mapTreeBottom(makeRoom,t)
+    return t      
 
 def handle_keys():
     global player
@@ -227,13 +266,14 @@ con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 libtcod.console_disable_keyboard_repeat()
 
 
-t = generateSplit(Tree(Split(0,0,80,80),None,None))
-t.displayG(m)
+t = generateDungeon()
+t.displayF(m)
 render_all(m)    
 libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 libtcod.console_flush()
 print "done"
 key = libtcod.console_wait_for_keypress(True)
+
 exit()
 
 
