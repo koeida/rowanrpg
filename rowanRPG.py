@@ -186,15 +186,15 @@ def generateSplit(t):
 def makeRoom(t):
     MIN_SIZE = 8
     area = t.leaf
-    minX = area.x + 1
-    minY = area.y + 1
+    minX = area.x
+    minY = area.y
     maxX = area.x + area.w - MIN_SIZE - 1
     maxY = area.y + area.h - MIN_SIZE - 1
     
     newX = random.randint(minX,maxX)
     newY = random.randint(minY,maxY)
-    newW = random.randint(MIN_SIZE,area.w - (newX - minX))
-    newH = random.randint(MIN_SIZE,area.h - (newY - minY))
+    newW = random.randint(MIN_SIZE,area.w - (newX - minX)) - 1
+    newH = random.randint(MIN_SIZE,area.h - (newY - minY)) - 1
     return Tree(Split(newX,newY,newW,newH),t.l,t.r)
 
 
