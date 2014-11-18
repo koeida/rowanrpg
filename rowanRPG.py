@@ -10,33 +10,38 @@ class Entity:
 starting_map = [[1 for x in range(100)] for x in range(100)]
 
 player = Entity()
-player.x = 50
-player.y = 50
+player.x = 1
+player.y = 1
 player.c = "@"
 player.id = 0
+player.movementType = "player"
 
-squirrel = Entity()
-squirrel.x = 51
-squirrel.y = 51
-squirrel.direction = 0
-squirrel.c = "S"
-squirrel.id = 1
-
-entities = [player,squirrel]
+entities = [player]
 
 #actual size of the window
-SCREEN_WIDTH = 100
-SCREEN_HEIGHT = 100
+SCREEN_WIDTH = 80
+SCREEN_HEIGHT = 80
 
 #size of the game_map
-game_map_WIDTH = 80
-game_map_HEIGHT = 80
+game_map_WIDTH = 10
+game_map_HEIGHT = 10
 
 color_dark_wall = libtcod.Color(50, 50, 0)
 color_dark_ground = libtcod.Color(100, 100, 50)
 color_grass = libtcod.Color(0, 150, 0)
 color_light_green = libtcod.Color(0,250,0);
 color_tree = libtcod.Color(0, 100, 0)
+
+def makeSquirrel(x,y):
+    global entities
+    s = Entity()
+    s.x = x
+    s.y = y
+    s.direction = 0
+    s.c = "S"
+    s.id = len(entities) + 1
+    s.movementType = "bumper"
+    return s
 
 def draw_character(x,y,c,color = libtcod.white,bg = libtcod.BKGND_NONE):
     libtcod.console_set_default_foreground(con,color)
@@ -61,150 +66,9 @@ def render_all(game_map):
 
     libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
-def carveRoom(m,x,y,width,height,carveWith):   
-    result = copy.deepcopy(m)
-    for cy in range(height):
-        for cx in range(width):
-            yi = y + cy
-            xi = x + cx
-            result[yi][xi] = carveWith
-    return result
-
-def multiListCopy(source,dest,startX,startY):
-    result = copy.deepcopy(dest)
-    for y in range(len(source)):
-        for x in range(len(source[0])):
-            result[y + startY][x + startX] = source[y][x]            
-    return result
-
-class Split:
-    def __init__(self,x,y,w,h):
-        self.x = x
-        self.y = y
-        self.w = w
-        self.h = h
-
-class Tree:
-    def __init__(self,leaf,l,r):
-        self.leaf = leaf
-        self.l = l
-        self.r = r
-    def display(self):
-        #if self.l == None and self.r == None:
-        print str(self.leaf.x) + "," + str(self.leaf.y) + " w:" + str(self.leaf.w) + " h:" + str(self.leaf.h)
-        if(self.l != None):
-            self.l.display()
-        if(self.r != None):
-            self.r.display()
-    def displayG(self,m):        
-        drawRect(m,self.leaf.x,self.leaf.y,self.leaf.w,self.leaf.h)
-        if(self.l != None):
-            self.l.displayG(m)
-        if(self.r != None):
-            self.r.displayG(m)
-    def displayF(self,m):
-        if self.l == None and self.r == None:   
-            fillRect(m,self.leaf.x,self.leaf.y,self.leaf.w,self.leaf.h)
-        if(self.l != None):
-            self.l.displayF(m)
-        if(self.r != None):
-            self.r.displayF(m)
-
-def drawRect(m,x,y,w,h):
-    for row in range(h):
-        for column in range(w):
-            if row == 0 or column == 0 or row == (h - 1) or column == (w - 1): 
-                m[row + y][column + x] = 0
-
-def fillRect(m,x,y,w,h):
-    for row in range(h):
-        for column in range(w):            
-            m[row + y][column + x] = 0
-    
-
-def filterTree(f,t):
-    if t == None: return None
-    if f(t.leaf):
-        return Tree(t.leaf,filterTree(f,t.l),filterTree(f,t.r))
-    else:
-        return None
-
-def mapTree(f,t):
-    if t == None: return None
-    res = f(t)
-    return Tree(res.leaf,mapTree(f,t.l),mapTree(f,t.r))
-
-def mapTreeBottom(f,t):
-    if t == None:
-        return None
-    if t.l == None and t.r == None:
-        res = f(t)        
-        return Tree(res.leaf,None,None)
-    else:
-        return Tree(t.leaf,mapTreeBottom(f,t.l),mapTreeBottom(f,t.r))
-
-
-m = [[1 for x in range(100)] for y in range(100)]
-
-def treeDebug(t):
-    global m
-    t.displayG(m)
-    render_all(m)    
-    libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
-    libtcod.console_flush()
-    key = libtcod.console_wait_for_keypress(True)
-
-def generateSplit(t):
-    global m
-    x = t.leaf.x
-    y = t.leaf.y
-    w = t.leaf.w
-    h = t.leaf.h
-    MIN_ROOM_SIZE = 10
-    if w < MIN_ROOM_SIZE or h < MIN_ROOM_SIZE:
-        return None
-
-    roomBuffer = MIN_ROOM_SIZE / 2
-    vertical = random.randint(0,1)
-    if(vertical):
-        minSplit = roomBuffer
-        maxSplit = h - roomBuffer        
-        splitY = random.randint(minSplit,maxSplit)
-        l = Split(x,y,w,splitY)
-        r = Split(x,splitY + y,w,h - splitY)
-        t = Tree(Split(x,y,w,h),Tree(l,None,None),Tree(r,None,None))           
-        return Tree(Split(x,y,w,h),generateSplit(Tree(l,None,None)),generateSplit(Tree(r,None,None)))
-    else:
-        minSplit = roomBuffer
-        maxSplit = w - roomBuffer
-        splitX = random.randint(minSplit,maxSplit)        
-        l = Split(x,y,splitX ,h)
-        r = Split(splitX + x,y,w - splitX,h)
-        t = Tree(Split(x,y,w,h),Tree(l,None,None),Tree(r,None,None))
-        return Tree(Split(x,y,w,h),generateSplit(Tree(l,None,None)),generateSplit(Tree(r,None,None)))
-
-def makeRoom(t):
-    MIN_SIZE = 8
-    area = t.leaf
-    minX = area.x
-    minY = area.y
-    maxX = area.x + area.w - MIN_SIZE - 1
-    maxY = area.y + area.h - MIN_SIZE - 1
-    
-    newX = random.randint(minX,maxX)
-    newY = random.randint(minY,maxY)
-    newW = random.randint(MIN_SIZE,area.w - (newX - minX)) - 1
-    newH = random.randint(MIN_SIZE,area.h - (newY - minY)) - 1
-    return Tree(Split(newX,newY,newW,newH),t.l,t.r)
-
-
-def generateDungeon():
-    t = generateSplit(Tree(Split(0,0,80,80),None,None))
-    t = mapTreeBottom(makeRoom,t)
-    return t      
-
 def handle_keys():
     global player
+    global entities
     key = libtcod.console_wait_for_keypress(True)
 
     if key.vk == libtcod.KEY_ESCAPE:
@@ -222,40 +86,42 @@ def handle_keys():
     elif libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
         newX += 1
 
-    if game_map[newY][newX] == 0:
+    if game_map[newY][newX] == 0 and not thingInTheWay(entities,newX,newY,player.id):
         player.x = newX
         player.y = newY
 
 def thingInTheWay(entities,x,y,eid):
     return len(filter(lambda e: e.x == x and e.y == y and e.id != eid,entities)) > 0
 
-def moveSquirrel():
+def moveEntity(e):
+    if e.movementType == "bumper":
+        bumperMotion(e)
+
+def bumperMotion(e):
     global game_map
-    global squirrel
     movements = [[0,1],
                 [0,-1],
                 [-1,0],
-                [0,1]]
-    currentMovement = movements[squirrel.direction]
+                [1,0]]
+    currentMovement = movements[e.direction]
     yMove = currentMovement[0]
     xMove = currentMovement[1]
-    oldX = squirrel.x
-    oldY = squirrel.y
-    squirrel.x += xMove
-    squirrel.y += yMove
+    oldX = e.x
+    oldY = e.y
+    e.x += xMove
+    e.y += yMove
 
-    if(game_map[squirrel.y][squirrel.x] != 0 or thingInTheWay(entities,squirrel.x,squirrel.y,squirrel.id)):
-        squirrel.x = oldX
-        squirrel.y = oldY
-        squirrel.direction += 1
-        if squirrel.direction == 4:
-            squirrel.direction = 0
+    if(game_map[e.y][e.x] != 0 or thingInTheWay(entities,e.x,e.y,e.id)):
+        e.x = oldX
+        e.y = oldY
+        e.direction += 1
+        if e.direction == 4:
+            e.direction = 0
 
 
 #############################################
 # Initialization & Main Loop
 #############################################
-
 
 libtcod.console_disable_keyboard_repeat()
 
@@ -266,16 +132,20 @@ con = libtcod.console_new(SCREEN_WIDTH, SCREEN_HEIGHT)
 libtcod.console_disable_keyboard_repeat()
 
 
-t = generateDungeon()
-t.displayF(m)
-render_all(m)    
-libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
-libtcod.console_flush()
-print "done"
-key = libtcod.console_wait_for_keypress(True)
-
-exit()
-
+game_map = [
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1]]
+    
+entities += [makeSquirrel(2,2)]
+entities += [makeSquirrel(2,3)]
 
 while not libtcod.console_is_window_closed():
     #render the screen
@@ -284,6 +154,7 @@ while not libtcod.console_is_window_closed():
 
     for entity in entities:
         draw_character(entity.x,entity.y,entity.c)
+        moveEntity(entity)
 
     libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
     libtcod.console_flush()
