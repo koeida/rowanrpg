@@ -7,14 +7,20 @@ class Entity:
     def __init__(self):
         return
 
-starting_map = [[1 for x in range(100)] for x in range(100)]
+class Area:
+    def __init__(self,m,entities):
+        self.map = m
+        self.entities = entities
+        return
 
 player = Entity()
 player.x = 1
 player.y = 1
 player.c = "@"
 player.id = 0
+player.kind = "player"
 player.movementType = "player"
+player.blockMove = True
 
 entities = [player]
 
@@ -31,6 +37,7 @@ color_dark_ground = libtcod.Color(100, 100, 50)
 color_grass = libtcod.Color(0, 150, 0)
 color_light_green = libtcod.Color(0,250,0);
 color_tree = libtcod.Color(0, 100, 0)
+color_black = libtcod.Color(0,0,0)
 
 def makeSquirrel(x,y):
     global entities
@@ -41,6 +48,23 @@ def makeSquirrel(x,y):
     s.c = "S"
     s.id = len(entities) + 1
     s.movementType = "bumper"
+    s.kind = "creature"
+    s.blockMove = True
+    return s
+
+def makeStairs(x,y,destMap,destX,destY):
+    global entities
+    s = Entity()
+    s.x = x
+    s.y = y
+    s.c = ">"
+    s.id = len(entities) + 1
+    s.kind = "stairs"
+    s.movementType = "stationary"
+    s.destMap = destMap
+    s.destX = destX
+    s.destY = destY
+    s.blockMove = False
     return s
 
 def draw_character(x,y,c,color = libtcod.white,bg = libtcod.BKGND_NONE):
@@ -54,7 +78,8 @@ def render_all(game_map):
             1:["#",libtcod.white,color_dark_wall],
             2:["#",color_light_green,color_grass],
             3:["T",color_tree,color_grass],
-            4:["S",libtcod.white,color_dark_ground]}
+            4:["S",libtcod.white,color_dark_ground],
+            5:[">",libtcod.white,color_dark_ground]}
     #go through all tiles, and set their background color
     for y in range(game_map_HEIGHT):
         for x in range(game_map_WIDTH):
@@ -66,9 +91,17 @@ def render_all(game_map):
 
     libtcod.console_blit(con, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 0, 0)
 
+def first(f,l):
+    r = filter(f,l)
+    if len(r) > 0:
+        return r[0]
+    else:
+        return None
+
 def handle_keys():
     global player
     global entities
+    global currentMap
     key = libtcod.console_wait_for_keypress(True)
 
     if key.vk == libtcod.KEY_ESCAPE:
@@ -85,13 +118,22 @@ def handle_keys():
         newX -= 1
     elif libtcod.console_is_key_pressed(libtcod.KEY_RIGHT):
         newX += 1
-
-    if game_map[newY][newX] == 0 and not thingInTheWay(entities,newX,newY,player.id):
+    else:
+        k = chr(key.c)
+        if k == '>':
+            stairs = first(lambda e: e.kind == 'stairs' and e.x == player.x and e.y == player.y,entities)
+            if stairs != None:
+                currentMap = stairs.destMap
+                newY = stairs.destY
+                newX = stairs.destX
+                entities = currentMap.entities
+            
+    if currentMap.map[newY][newX] != 1 and not thingInTheWay(entities,newX,newY,player.id):
         player.x = newX
         player.y = newY
 
 def thingInTheWay(entities,x,y,eid):
-    return len(filter(lambda e: e.x == x and e.y == y and e.id != eid,entities)) > 0
+    return len(filter(lambda e: e.x == x and e.y == y and e.id != eid and e.blockMove,entities)) > 0
 
 def moveEntity(e):
     if e.movementType == "bumper":
@@ -143,14 +185,34 @@ game_map = [
     [1,0,0,0,0,0,0,0,0,1],
     [1,0,0,0,0,0,0,0,0,1],
     [1,1,1,1,1,1,1,1,1,1]]
-    
+
+game_map2 = [
+    [1,1,1,1,1,1,1,1,1,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,0,1,1,1,1,1,1,0,1],
+    [1,0,0,0,0,0,0,1,0,1],
+    [1,1,1,1,1,1,1,1,0,1],
+    [1,0,0,0,0,0,0,1,0,1],
+    [1,0,1,1,1,1,0,1,0,1],
+    [1,0,1,1,1,1,1,1,0,1],
+    [1,0,0,0,0,0,0,0,0,1],
+    [1,1,1,1,1,1,1,1,1,1]]
+
+
 entities += [makeSquirrel(2,2)]
 entities += [makeSquirrel(2,3)]
 
+entities2 = [player]
+map1 = Area(game_map,entities)
+map2 = Area(game_map2,entities2)
+
+entities += [makeStairs(2,5,map2,3,5)]
+entities2 += [makeStairs(3,5,map1,2,5)]
+currentMap = map1
+
 while not libtcod.console_is_window_closed():
     #render the screen
-    #moveSquirrel()
-    render_all(game_map)    
+    render_all(currentMap.map)    
 
     for entity in entities:
         draw_character(entity.x,entity.y,entity.c)
