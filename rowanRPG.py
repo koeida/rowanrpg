@@ -1,14 +1,14 @@
-import random
 import copy
 import hm
 import libtcodpy as libtcod
+import random
 
-from globals import *
-from misc import *
-from display import *
-from map import *
 from creatures import *
+from display import *
+from globals import *
 from input import *
+from map import *
+from misc import *
 
 def testArea():
     game_map = [
@@ -26,26 +26,26 @@ def testArea():
                       movementFunc=nullMotion, kind="player",
                       blockMove=True, target=None, hp=50)  
 
-    return Area(game_map,[player,makeSquirrel(2,2,1),
+    return newArea(game_map,[player,makeSquirrel(2,2,1),
                 makeSquirrel(2,3,2)])
 
 def main():
-    global ticks
+    global GameGlobals
 
     currentArea = testArea()
     initDisplay()
 
     message("Welcome to RowanRPG!",libtcod.red)
     while not libtcod.console_is_window_closed():
-        ticks += 1
+        GameGlobals.ticks += 1
         key = libtcod.console_check_for_keypress(True)
         if(key.vk != libtcod.KEY_NONE):
             shouldQuit,currentArea = handle_keys(key,currentArea)
             if shouldQuit:
                 break
             for e in currentArea.entities:
-                currentArea.map[e.y][e.x].changed = True
-            currentArea.entities = map(lambda e: moveEntity(e,currentArea),currentArea.entities)
+                currentArea.map[e.y][e.x] = currentArea.map[e.y][e.x]._replace(changed = True)
+            currentArea = currentArea._replace(entities=map(lambda e: moveEntity(e,currentArea),currentArea.entities))
 
         #render the screen
         display(currentArea)

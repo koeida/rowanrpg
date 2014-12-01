@@ -5,7 +5,7 @@ from display import *
 def bearMotion(e,area):    
     if e.target == None:
         nearbyEntities = getEntitiesIn(e.x - 2,e.y - 2,e.x + 2,e.y + 2,area)       
-        player = first(lambda e: e.kind == "player",area.entities)
+        player = first(lambda e: e.kind == "player",nearbyEntities)
         if player != None:
             target = player.id
             return e._replace(target=target)
@@ -48,14 +48,14 @@ def nullMotion(e,area):
     return e
 
 def makeSquirrel(x,y,id):
-    return Creature(x=x,y=y,direction=0,c="S",id=id,
-                    movementFunc=bumperMotion,kind="creature",
-                    blockMove=True,target=None,hp=5)
+    return Creature(x = x, y = y, direction = 0,c = "S",id = id,
+                    movementFunc = bumperMotion, kind = "creature",
+                    blockMove = True, target = None, hp = 5)
 
 def makeBear(x,y,id):
-    return Creature(x=x,y=y,direction=0,c="B",id=id,
-                    movementFunc=bearMotion,kind="creature",
-                    blockMove=True,target=None,hp=20)
+    return Creature(x = x, y = y, direction = 0, c = "B", id = id,
+                    movementFunc = bearMotion, kind = "creature",
+                    blockMove = True, target = None, hp = 20)
 
 def moveEntity(e,area):
     moved = e.movementFunc(e,area)    

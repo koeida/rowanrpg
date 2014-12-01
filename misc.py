@@ -1,6 +1,8 @@
 from collections import namedtuple
 from functools import partial
 
+import copy
+
 Entity = namedtuple('Entity',['x','y','c','id','kind','blockMove'])
 
 Creature = namedtuple('Creature',Entity._fields + 
@@ -38,3 +40,10 @@ def compose(f,g):
 def zipWith(f,l,l2):
     z = zip(l,l2)
     return map(lambda e: f(e[0],e[1]),z)
+
+def map2d(f,l):
+    l = copy.deepcopy(l)
+    for y in range(len(l)):
+        for x in range(len(l[0])):
+            l[y][x] = f(l[y][x])
+    return l

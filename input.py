@@ -6,7 +6,7 @@ from map import *
 def handle_keys(key,currentArea):
     shouldQuit = False
     currentArea = copy.deepcopy(currentArea)
-    player = currentArea.entities[0]
+    p = currentArea.entities[0]
 
     if key.vk == libtcod.KEY_ESCAPE:
         shouldQuit = True #exit game
@@ -14,8 +14,8 @@ def handle_keys(key,currentArea):
         #Alt+Enter: toggle fullscreen
         libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
 
-    newX = player.x
-    newY = player.y
+    newX = p.x
+    newY = p.y
     #movement keys
     if libtcod.console_is_key_pressed(libtcod.KEY_UP):
         newY -= 1
@@ -28,8 +28,8 @@ def handle_keys(key,currentArea):
     else:
         k = chr(key.c)        
 
-    if not bump(newX,newY,player.id,currentArea):
-        currentArea.map[player.y][player.x].changed = True
-        currentArea.entities[0] = player._replace(x = newX,y = newY)
+    if not bump(newX,newY,p.id,currentArea):
+        currentArea.map[p.y][p.x] = currentArea.map[p.y][p.x]._replace(changed = True)
+        currentArea.entities[0] = p._replace(x = newX,y = newY)
 
     return [shouldQuit,currentArea]
