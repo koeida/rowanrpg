@@ -27,11 +27,11 @@ def testArea():
                       blockMove=True, target=None, hp=50)  
 
     return Area(game_map,[player,makeSquirrel(2,2,1),
-                makeSquirrel(2,3,2),makeBear(3,3,3)])
+                makeSquirrel(2,3,2)])
 
 def main():
     global ticks
-    
+
     currentArea = testArea()
     initDisplay()
 

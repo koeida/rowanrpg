@@ -2,12 +2,6 @@ from misc import *
 from map import *
 from display import *
 
-from collections import namedtuple
-
-Creature = namedtuple('Creature',['x','y','direction','c','id',
-                                  'movementFunc','kind','blockMove',
-                                  'target','hp'])
-
 def bearMotion(e,area):    
     if e.target == None:
         nearbyEntities = getEntitiesIn(e.x - 2,e.y - 2,e.x + 2,e.y + 2,area)       
@@ -44,11 +38,10 @@ def bumperMotion(e,area):
     x = e.x + xMove
     y = e.y + yMove
     d = e.direction
-    if bump(e.x,e.y,e.id,area):
+    if bump(x,y,e.id,area):
         d += 1
         if d == 4:
-            d = 0
-
+            d = 0        
     return e._replace(x = x,y = y,direction=d)
 
 def nullMotion(e,area):
@@ -65,11 +58,9 @@ def makeBear(x,y,id):
                     blockMove=True,target=None,hp=20)
 
 def moveEntity(e,area):
-    oldE = e
+    moved = e.movementFunc(e,area)    
 
-    e = e.movementFunc(e,area)    
-
-    if bump(e.x,e.y,e.id,area):
-        return oldE
+    if bump(moved.x,moved.y,moved.id,area):
+        return moved._replace(x = e.x,y=e.y)
     else:
-        return e
+        return moved

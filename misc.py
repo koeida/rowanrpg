@@ -1,6 +1,13 @@
-class Entity:
-    def __init__(self):
-        return
+from collections import namedtuple
+from functools import partial
+
+Entity = namedtuple('Entity',['x','y','c','id','kind','blockMove'])
+
+Creature = namedtuple('Creature',Entity._fields + 
+    ('direction','movementFunc','target','hp'))
+
+Stairs = namedtuple('Stairs',Entity._fields +
+    ('destArea','destX','destY'))
 
 def chain(fs,v):
     return reduce((lambda x,y: y(x)),fs,v)
@@ -8,7 +15,7 @@ def chain(fs,v):
 def contains(f,l):
     return len(filter(f,l)) > 0
 
-def within(v,lower,upper):
+def within(lower,upper,v):
     if v >= upper:
         return upper
     elif v <= lower:
@@ -16,9 +23,18 @@ def within(v,lower,upper):
     else:
         return v
 
+colorLimit = partial(within,0,255)
+
 def first(f,l):
     r = filter(f,l)
     if len(r) > 0:
         return r[0]
     else:
         return None
+
+def compose(f,g):
+    return lambda x: f(g(x))
+
+def zipWith(f,l,l2):
+    z = zip(l,l2)
+    return map(lambda e: f(e[0],e[1]),z)

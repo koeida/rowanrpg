@@ -1,9 +1,12 @@
 import copy
 import libtcodpy as libtcod
+import operator
 import random
 
 from globals import *
 from misc import *
+
+
 
 class Tile:
     def __init__(self,c,fg,bg,walkable = True):
@@ -36,9 +39,9 @@ class Area:
             2:Tile(" ",libtcod.white,color_shore),
             1:Tile(" ",libtcod.white,color_shallow_water),
             0:Tile(" ",libtcod.white,color_deep_water,False)}
-        tiles[0].onTick = lambda self: shimmer(self,25,90,206,10,10,20)
+        tiles[0].onTick = lambda self: shimmer(self,[25,90,206],[10,10,20])
         tiles[0].animated = True
-        tiles[1].onTick = lambda self: shimmer(self,105,161,255,5,5,10)
+        tiles[1].onTick = lambda self: shimmer(self,[105,161,255],[5,5,10])
         tiles[1].animated = True
         for y in range(len(m)):
             for x in range(len(m[0])):
@@ -63,30 +66,22 @@ def getEntitiesIn(cx,cy,ex,ey,a):
 def isOffscreen(x,y,m):
     return x < 0 or x >= len(m[0]) or y < 0 or y >= len(m)
 
-def makeStairs(x,y,destMap,destX,destY):
-    global entities
-    s = Entity()
-    s.x = x
-    s.y = y
-    s.c = ">"
-    s.id = len(entities) + 1
-    s.kind = "stairs"
-    s.movementType = "stationary"
-    s.destMap = destMap
-    s.destX = destX
-    s.destY = destY
-    s.blockMove = False
-    return s     
+def makeStairs(x,y,id,destArea,destX,destY):
+    return Stairs(x=x, y=y, c="S", id=id, kind="mapFeature", 
+                  blockMove=False, destX=destX, destY=destY, destArea=destArea)
 
-def shimmer(self,sr,sg,sb,rr,rg,rb):
-    makeRange = lambda r: random.randint(-1 * r,r)
-    limit = lambda v: within(v,0,255)
-    colorMods = zip([sr,sg,sb],map(makeRange,[rr,rg,rb]))
-    r,g,b = map(lambda vs: limit(vs[0] + vs[1]),colorMods)
+def shimmer(self,initialRGB,rangeRGB):
+    randomInRange = lambda r: random.randint(-1 * r,r)
+    colorChanges  = map(randomInRange,rangeRGB)
+
+    changed = zipWith(operator.add, initialRGB, colorChanges)
+    r,g,b   = map(colorLimit,changed)
     self.bg = libtcod.Color(r,g,b)
 
-def thingInTheWay(entities,x,y,eid):
-    return (len(filter(lambda e: e.x  == x   and 
-                                 e.y  == y   and 
-                                 e.id != eid and 
-                                 e.blockMove,entities)) > 0)
+def thingInTheWay(entities,x,y,eid):    
+    blockableThings = filter(lambda e: e.x  == x   and 
+                                       e.y  == y   and 
+                                       e.id != eid and 
+                                       e.blockMove,entities)
+    return len(blockableThings) > 0
+    
