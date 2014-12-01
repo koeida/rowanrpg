@@ -30,7 +30,6 @@ def handle_keys(key,currentArea):
 
     if not bump(newX,newY,player.id,currentArea):
         currentArea.map[player.y][player.x].changed = True
-        player.x = newX
-        player.y = newY
+        currentArea.entities[0] = player._replace(x = newX,y = newY)
 
     return [shouldQuit,currentArea]

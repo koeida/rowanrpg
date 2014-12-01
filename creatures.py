@@ -2,37 +2,38 @@ from misc import *
 from map import *
 from display import *
 
-def bearMotion(e,area):
-    e = copy.deepcopy(e)
-    
+from collections import namedtuple
+
+Creature = namedtuple('Creature',['x','y','direction','c','id',
+                                  'movementFunc','kind','blockMove',
+                                  'target','hp'])
+
+def bearMotion(e,area):    
     if e.target == None:
-        #Is player around?
-        lookCx = e.x - 2
-        lookCy = e.y - 2
-        lookEx = e.x + 2
-        lookEy = e.y + 2
-        nearbyEntities = getEntitiesIn(lookCx,lookCy,lookEx,lookEy,area)       
+        nearbyEntities = getEntitiesIn(e.x - 2,e.y - 2,e.x + 2,e.y + 2,area)       
         player = first(lambda e: e.kind == "player",area.entities)
         if player != None:
-            message("I eat you now.",libtcod.red)
-            e.target = player.id
+            target = player.id
+            return e._replace(target=target)
+        else:
+            return e
     else:
         target = first(lambda a: a.id == e.target,area.entities)
+        x = e.x
+        y = e.y
         if target.x <= e.x:
-            e.x -= 1
+            x -= 1
         if target.y <= e.y:
-            e.y -= 1
+            y -= 1
         if target.x >= e.x:
-            e.x += 1
+            x += 1
         if target.y >= e.y:
-            e.y += 1
-        print "bear movin'"
+            y += 1
         if abs(e.x - target.x) <= 1 and abs(e.y - target.y) <= 1:
             message("I am presently standing here eating you",libtcod.red)
-    return e
+        return e._replace(x = x, y = y)
 
 def bumperMotion(e,area):
-    e = copy.deepcopy(e)
     movements = [[0,1],
                 [0,-1],
                 [-1,0],
@@ -40,54 +41,35 @@ def bumperMotion(e,area):
     currentMovement = movements[e.direction]
     yMove = currentMovement[0]
     xMove = currentMovement[1]
-    e.x += xMove
-    e.y += yMove
+    x = e.x + xMove
+    y = e.y + yMove
+    d = e.direction
     if bump(e.x,e.y,e.id,area):
-        e.direction += 1
-        if e.direction == 4:
-            e.direction = 0
+        d += 1
+        if d == 4:
+            d = 0
 
+    return e._replace(x = x,y = y,direction=d)
+
+def nullMotion(e,area):
     return e
 
 def makeSquirrel(x,y,id):
-    global entities
-    s = Entity()
-    s.x = x
-    s.y = y
-    s.direction = 0
-    s.c = "S"
-    s.id = id
-    s.movementType = "bumper"
-    s.kind = "creature"
-    s.blockMove = True
-    s.hp = 5
-    return s
+    return Creature(x=x,y=y,direction=0,c="S",id=id,
+                    movementFunc=bumperMotion,kind="creature",
+                    blockMove=True,target=None,hp=5)
 
 def makeBear(x,y,id):
-    global entities
-    b = Entity()
-    b.x = x
-    b.y = y
-    b.c = "B"
-    b.id = id
-    b.movementType = "bear"
-    b.kind = "creature"
-    b.blockMove = True
-    b.target = None
-    b.hp = 20
-    return b
+    return Creature(x=x,y=y,direction=0,c="B",id=id,
+                    movementFunc=bearMotion,kind="creature",
+                    blockMove=True,target=None,hp=20)
 
 def moveEntity(e,area):
-    e = copy.deepcopy(e)
+    oldE = e
 
-    oldX = e.x
-    oldY = e.y
-    if e.movementType == "bumper":
-        e = bumperMotion(e,area)
-    elif e.movementType == "bear":
-        e = bearMotion(e,area)
+    e = e.movementFunc(e,area)    
 
     if bump(e.x,e.y,e.id,area):
-        e.x = oldX
-        e.y = oldY
-    return e
+        return oldE
+    else:
+        return e

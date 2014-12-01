@@ -3,7 +3,6 @@ import copy
 import hm
 import libtcodpy as libtcod
 
-from sets import Set
 from globals import *
 from misc import *
 from display import *
@@ -11,18 +10,7 @@ from map import *
 from creatures import *
 from input import *
 
-def main():
-    global ticks
-    player = Entity()
-    player.x = 4
-    player.y = 4
-    player.c = "@"
-    player.id = 0
-    player.kind = "player"
-    player.movementType = "player"
-    player.blockMove = True
-    player.hp = 50
-
+def testArea():
     game_map = [
         [0,0,0,0,0,0,0,0,0,0],
         [0,3,3,3,3,3,3,3,3,0],
@@ -34,11 +22,17 @@ def main():
         [0,3,3,3,3,3,3,3,3,0],
         [0,3,3,3,3,3,3,3,3,0],
         [0,0,0,0,0,0,0,0,0,0]]
+    player = Creature(x=4, y=4, direction=0, c="@", id=0,
+                      movementFunc=nullMotion, kind="player",
+                      blockMove=True, target=None, hp=50)  
 
-    map1 = Area(game_map,[player,makeSquirrel(2,2,1),
+    return Area(game_map,[player,makeSquirrel(2,2,1),
                 makeSquirrel(2,3,2),makeBear(3,3,3)])
-    currentArea = map1
 
+def main():
+    global ticks
+    
+    currentArea = testArea()
     initDisplay()
 
     message("Welcome to RowanRPG!",libtcod.red)
